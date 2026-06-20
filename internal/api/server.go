@@ -18,13 +18,15 @@ import (
 )
 
 type Config struct {
-	RateLimitRPS   float64
-	RateLimitBurst int
-	CORSOrigin     string
-	DefaultLimit   int
-	MaxLimit       int
-	MediaBaseURL   string
-	TrustProxy     bool
+	RateLimitRPS     float64
+	RateLimitBurst   int
+	CORSOrigin       string
+	DefaultLimit     int
+	MaxLimit         int
+	MediaBaseURL     string
+	MediaCache       bool
+	MediaCacheHeader string
+	TrustProxy       bool
 }
 
 type MessageStore interface {
@@ -63,6 +65,7 @@ func (s *Server) Routes() http.Handler {
 }
 
 func (s *Server) health(w http.ResponseWriter, r *http.Request) {
+	noStore(w)
 	if err := s.db.Ping(r.Context()); err != nil {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{
 			"status": "unhealthy",
@@ -74,6 +77,7 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) listChannels(w http.ResponseWriter, r *http.Request) {
+	noStore(w)
 	channels, err := s.db.ListChannels(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list channels")
@@ -83,6 +87,7 @@ func (s *Server) listChannels(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) listMessages(w http.ResponseWriter, r *http.Request) {
+	noStore(w)
 	limit := s.cfg.DefaultLimit
 	if raw := r.URL.Query().Get("limit"); raw != "" {
 		parsed, err := strconv.Atoi(raw)
@@ -132,6 +137,7 @@ func (s *Server) listMessages(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) latestMessage(w http.ResponseWriter, r *http.Request) {
+	noStore(w)
 	message, err := s.db.LatestMessage(r.Context(), strings.TrimSpace(r.URL.Query().Get("channel")))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to load latest message")
@@ -145,6 +151,9 @@ func (s *Server) latestMessage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) proxyMedia(w http.ResponseWriter, r *http.Request) {
+	if !s.cfg.MediaCache {
+		noStore(w)
+	}
 	if s.cfg.MediaBaseURL == "" {
 		writeError(w, http.StatusNotFound, "media proxy is disabled")
 		return
@@ -193,7 +202,9 @@ func (s *Server) proxyMedia(w http.ResponseWriter, r *http.Request) {
 	if contentLength := resp.Header.Get("Content-Length"); contentLength != "" {
 		w.Header().Set("Content-Length", contentLength)
 	}
-	w.Header().Set("Cache-Control", "public, max-age=3600")
+	if s.cfg.MediaCache {
+		w.Header().Set("Cache-Control", s.cfg.MediaCacheHeader)
+	}
 	w.WriteHeader(http.StatusOK)
 	_, _ = io.Copy(w, resp.Body)
 }
@@ -241,6 +252,7 @@ func (s *Server) withCORS(next http.Handler) http.Handler {
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		}
 		if r.Method == http.MethodOptions {
+			noStore(w)
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
@@ -283,5 +295,10 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 }
 
 func writeError(w http.ResponseWriter, status int, message string) {
+	noStore(w)
 	writeJSON(w, status, map[string]string{"error": message})
+}
+
+func noStore(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "no-store")
 }

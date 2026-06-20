@@ -105,6 +105,9 @@ func TestListMessages(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
 	}
+	if rec.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("cache control = %q", rec.Header().Get("Cache-Control"))
+	}
 	if db.listParams.Channel != "test" {
 		t.Fatalf("channel = %q", db.listParams.Channel)
 	}
@@ -254,11 +257,13 @@ func TestProxyMedia(t *testing.T) {
 	server := NewServer(&fakeStore{
 		media: &store.MessageMedia{MediaType: "photo", MediaFilePath: "photos/file.jpg"},
 	}, Config{
-		RateLimitRPS:   100,
-		RateLimitBurst: 100,
-		DefaultLimit:   20,
-		MaxLimit:       50,
-		MediaBaseURL:   upstream.URL,
+		RateLimitRPS:     100,
+		RateLimitBurst:   100,
+		DefaultLimit:     20,
+		MaxLimit:         50,
+		MediaBaseURL:     upstream.URL,
+		MediaCache:       true,
+		MediaCacheHeader: "public, max-age=60",
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/media?channel=test&message_id=10", nil)
@@ -271,8 +276,40 @@ func TestProxyMedia(t *testing.T) {
 	if rec.Header().Get("Content-Type") != "image/jpeg" {
 		t.Fatalf("content type = %q", rec.Header().Get("Content-Type"))
 	}
+	if rec.Header().Get("Cache-Control") != "public, max-age=60" {
+		t.Fatalf("cache control = %q", rec.Header().Get("Cache-Control"))
+	}
 	if rec.Body.String() != "image-data" {
 		t.Fatalf("body = %q", rec.Body.String())
+	}
+}
+
+func TestProxyMediaNoStoreWhenCacheDisabled(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("image-data"))
+	}))
+	defer upstream.Close()
+
+	server := NewServer(&fakeStore{
+		media: &store.MessageMedia{MediaType: "photo", MediaFilePath: "photos/file.jpg"},
+	}, Config{
+		RateLimitRPS:   100,
+		RateLimitBurst: 100,
+		DefaultLimit:   20,
+		MaxLimit:       50,
+		MediaBaseURL:   upstream.URL,
+		MediaCache:     false,
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/media?channel=test&message_id=10", nil)
+	rec := httptest.NewRecorder()
+	server.Routes().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	if rec.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("cache control = %q", rec.Header().Get("Cache-Control"))
 	}
 }
 

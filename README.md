@@ -128,3 +128,5 @@ See `.env.example` for all settings.
 Set `TELEGRAM_ENABLED=false` to run only the API against existing database rows.
 
 Set `TRUST_PROXY_HEADERS=true` only when the service is behind a trusted reverse proxy that overwrites `X-Forwarded-For` or `X-Real-IP`; otherwise clients could spoof those headers to bypass rate limits.
+
+JSON API endpoints send `Cache-Control: no-store`. Media proxy responses send `MEDIA_CACHE_CONTROL` when `MEDIA_CACHE_ENABLED=true`; set `MEDIA_CACHE_ENABLED=false` to force `Cache-Control: no-store` for `/api/media` too.

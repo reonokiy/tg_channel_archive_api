@@ -16,6 +16,8 @@ func TestLoadAPIOnlyConfig(t *testing.T) {
 	t.Setenv("MAX_PAGE_LIMIT", "75")
 	t.Setenv("LOG_LEVEL", "debug")
 	t.Setenv("TRUST_PROXY_HEADERS", "true")
+	t.Setenv("MEDIA_CACHE_ENABLED", "false")
+	t.Setenv("MEDIA_CACHE_CONTROL", "public, max-age=86400")
 
 	cfg, err := Load()
 	if err != nil {
@@ -35,6 +37,9 @@ func TestLoadAPIOnlyConfig(t *testing.T) {
 	}
 	if !cfg.API.TrustProxy {
 		t.Fatal("expected trusted proxy headers")
+	}
+	if cfg.API.MediaCache || cfg.API.MediaCacheHeader != "public, max-age=86400" {
+		t.Fatalf("media cache = %+v", cfg.API)
 	}
 	if cfg.Telegram.Enabled {
 		t.Fatal("telegram should be disabled")

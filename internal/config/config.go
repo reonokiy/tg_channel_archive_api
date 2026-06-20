@@ -31,13 +31,15 @@ func Load() (Config, error) {
 		DatabaseURL: os.Getenv("DATABASE_URL"),
 		LogLevel:    logLevelEnv("LOG_LEVEL", slog.LevelInfo),
 		API: api.Config{
-			RateLimitRPS:   floatEnv("RATE_LIMIT_RPS", 2),
-			RateLimitBurst: intEnvDefault("RATE_LIMIT_BURST", 10),
-			CORSOrigin:     stringEnv("CORS_ORIGIN", "*"),
-			DefaultLimit:   intEnvDefault("DEFAULT_PAGE_LIMIT", 50),
-			MaxLimit:       intEnvDefault("MAX_PAGE_LIMIT", 100),
-			MediaBaseURL:   mediaBaseURL(os.Getenv("TELEGRAM_BOT_TOKEN")),
-			TrustProxy:     boolEnv("TRUST_PROXY_HEADERS", false),
+			RateLimitRPS:     floatEnv("RATE_LIMIT_RPS", 2),
+			RateLimitBurst:   intEnvDefault("RATE_LIMIT_BURST", 10),
+			CORSOrigin:       stringEnv("CORS_ORIGIN", "*"),
+			DefaultLimit:     intEnvDefault("DEFAULT_PAGE_LIMIT", 50),
+			MaxLimit:         intEnvDefault("MAX_PAGE_LIMIT", 100),
+			MediaBaseURL:     mediaBaseURL(os.Getenv("TELEGRAM_BOT_TOKEN")),
+			MediaCache:       boolEnv("MEDIA_CACHE_ENABLED", true),
+			MediaCacheHeader: stringEnv("MEDIA_CACHE_CONTROL", "public, max-age=3600"),
+			TrustProxy:       boolEnv("TRUST_PROXY_HEADERS", false),
 		},
 		Telegram: telegram.Config{
 			Enabled:      boolEnv("TELEGRAM_ENABLED", true),
@@ -69,6 +71,9 @@ func Load() (Config, error) {
 	}
 	if cfg.API.DefaultLimit <= 0 || cfg.API.MaxLimit <= 0 || cfg.API.DefaultLimit > cfg.API.MaxLimit {
 		return Config{}, errors.New("page limits must be positive and DEFAULT_PAGE_LIMIT must be <= MAX_PAGE_LIMIT")
+	}
+	if cfg.API.MediaCache && strings.TrimSpace(cfg.API.MediaCacheHeader) == "" {
+		return Config{}, errors.New("MEDIA_CACHE_CONTROL is required when MEDIA_CACHE_ENABLED=true")
 	}
 	if cfg.Telegram.Enabled {
 		switch cfg.Telegram.Source {

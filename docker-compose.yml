@@ -28,6 +28,8 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
       DEFAULT_PAGE_LIMIT: ${DEFAULT_PAGE_LIMIT:-50}
       MAX_PAGE_LIMIT: ${MAX_PAGE_LIMIT:-100}
+      MEDIA_CACHE_ENABLED: ${MEDIA_CACHE_ENABLED:-true}
+      MEDIA_CACHE_CONTROL: ${MEDIA_CACHE_CONTROL:-public, max-age=3600}
     ports:
       - "8080:8080"
     volumes:
