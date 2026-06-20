@@ -67,8 +67,7 @@ Versioned Docker images are published to GitHub Container Registry by GitHub Act
 Create and push a semver tag to publish a release image:
 
 ```sh
-git tag v0.1.0
-git push origin v0.1.0
+make release VERSION=v0.1.0
 ```
 
 The workflow publishes tags such as:
