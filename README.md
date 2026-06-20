@@ -60,6 +60,23 @@ TELEGRAM_ENABLED=false docker compose up --build api
 
 Database migrations are managed by `goose` and embedded into the server binary from `internal/store/migrations`. The server runs pending migrations automatically on startup.
 
+## Container Image
+
+Versioned Docker images are published to GitHub Container Registry by GitHub Actions.
+
+Create and push a semver tag to publish a release image:
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The workflow publishes tags such as:
+
+- `ghcr.io/reonokiy/tg_channel_archive_api:v0.1.0`
+- `ghcr.io/reonokiy/tg_channel_archive_api:0.1.0`
+- `ghcr.io/reonokiy/tg_channel_archive_api:0.1`
+
 ## API
 
 ### `GET /healthz`
