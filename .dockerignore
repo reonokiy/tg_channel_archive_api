@@ -1,0 +1,7 @@
+.git
+.env
+*.session.json
+bin/
+tmp/
+postgres-data/
+server

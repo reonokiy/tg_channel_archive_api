@@ -1,0 +1,6 @@
+.env
+*.session.json
+bin/
+tmp/
+.agents/
+.codex/
